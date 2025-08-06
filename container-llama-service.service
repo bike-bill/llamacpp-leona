@@ -1,0 +1,23 @@
+# container-llama-service.service
+
+[Unit]
+Description=Podman container-llama-service.service
+Documentation=man:podman-generate-systemd(1)
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/run/user/1000/containers
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+Restart=on-failure
+TimeoutStopSec=70
+ExecStart=/usr/bin/podman start llama-service
+ExecStop=/usr/bin/podman stop  \
+	-t 10 llama-service
+ExecStopPost=/usr/bin/podman stop  \
+	-t 10 llama-service
+PIDFile=/run/user/1000/containers/overlay-containers/9da5d433c18b8d8f2b2b92c665ab152afcfdfbe4d40d8f6714b3a545ced87ec0/userdata/conmon.pid
+Type=forking
+
+[Install]
+WantedBy=default.target

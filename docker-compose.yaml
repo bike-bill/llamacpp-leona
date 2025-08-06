@@ -1,0 +1,44 @@
+services:
+  ollama:
+    image: ollama-arch-rocm
+    ports:
+      - 11434:11434
+    volumes:
+      - ollama_data:/root/.ollama
+      - /sys/module/amdgpu:/sys/module/amdgpu:rslave
+      - /opt/rocm:/opt/rocm:ro
+      - /dev/kfd:/dev/kfd:rw
+      - /dev/dri:/dev/dri:rw
+    container_name: ollama
+    tty: true
+    restart: unless-stopped
+    devices:
+      - "/dev/kfd:/dev/kfd:rw"
+      - "/dev/dri:/dev/dri:rw"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - AMDGPU_VERSION_OVERRIDE=24.1
+      - HSA_OVERRIDE_GFX_VERSION=11.0.0  # Required for Radeon 780M
+      - ROCR_VISIBLE_DEVICES=0 #try 0 or 1
+      - HIP_VISIBLE_DEVICES=0
+      - OLLAMA_NO_CUDA=0
+    group_add:
+      - video
+  webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    depends_on:
+      - ollama
+    volumes:
+      - webui_data:/app/backend/data
+    ports:
+      - "3000:8080"
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
+    environment:
+      - OLLAMA_API_BASE_URL=http://ollama:11434
+    
+volumes:
+  ollama_data: {}
+  webui_data: {}
