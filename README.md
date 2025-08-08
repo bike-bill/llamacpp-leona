@@ -14,8 +14,9 @@ This repository contains a `Containerfile.llama-hip` for building a containerize
 To build the container image, use the `podman build` command. The `--no-cache` flag ensures a fresh build, and `--security-opt seccomp=unconfined` is required for ROCm compatibility.
 
 ```bash
-podman build --no-cache --security-opt seccomp=unconfined -t llama-hip -f Containerfile.llama-hip .
+podman build --security-opt seccomp=unconfined -t llama-hip -f Containerfile.llama-hip .
 ```
+--no-cache
 
 ### Run Instructions
 After building the image, you can run the container. The command below includes all the necessary flags to expose your GPU and set the correct environment variables for llama.cpp to use HIPBLAS.
