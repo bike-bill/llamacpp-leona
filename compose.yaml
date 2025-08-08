@@ -1,34 +1,46 @@
 services:
-  ollama:
-    image: ollama-arch-rocm
+  llamacpp:
+    build:
+      context: .
+      dockerfile: Containerfile.llama-hip
+    image: llama-hip:latest
+    container_name: llama-service
     ports:
-      - 11434:11434
+      - "8080:8080"
     volumes:
-      - ollama_data:/root/.ollama
+      - models_data:/models:Z
       - /sys/module/amdgpu:/sys/module/amdgpu:rslave
       - /opt/rocm:/opt/rocm:ro
-      - /dev/kfd:/dev/kfd:rw
-      - /dev/dri:/dev/dri:rw
-    container_name: ollama
-    tty: true
-    restart: unless-stopped
     devices:
       - "/dev/kfd:/dev/kfd:rw"
       - "/dev/dri:/dev/dri:rw"
-    environment:
-      - OLLAMA_HOST=0.0.0.0
-      - AMDGPU_VERSION_OVERRIDE=24.1
-      - HSA_OVERRIDE_GFX_VERSION=11.0.0  # Required for Radeon 780M
-      - ROCR_VISIBLE_DEVICES=0 #try 0 or 1
-      - HIP_VISIBLE_DEVICES=0
-      - OLLAMA_NO_CUDA=0
+    security_opt:
+      - seccomp=unconfined
     group_add:
       - video
+    environment:
+      - GGML_HIPBLAS=1
+      - HSA_OVERRIDE_GFX_VERSION=11.0.0
+      - ROCR_VISIBLE_DEVICES=0
+      - HIP_VISIBLE_DEVICES=0
+    restart: unless-stopped
+    tty: true
+    command: >
+      /llama.cpp/build/bin/llama-server 
+      -m /models/llama2-7b-chat.gguf 
+      --n-gpu-layers 32 
+      --ctx-size 2048 
+      --host 0.0.0.0 
+      --port 8080
+      --api-key ""
+      --cors
+      --log-format text
+
   webui:
     image: ghcr.io/open-webui/open-webui:main
-    container_name: open-webui
+    container_name: llamacpp-webui
     depends_on:
-      - ollama
+      - llamacpp
     volumes:
       - webui_data:/app/backend/data
     ports:
@@ -37,8 +49,10 @@ services:
       - host.docker.internal:host-gateway
     restart: unless-stopped
     environment:
-      - OLLAMA_API_BASE_URL=http://ollama:11434
+      - OLLAMA_BASE_URL=http://llamacpp:8080
+      - WEBUI_NAME="Llama.cpp WebUI"
+      - ENABLE_OLLAMA_API=true
     
 volumes:
-  ollama_data: {}
+  models_data: {}
   webui_data: {}
